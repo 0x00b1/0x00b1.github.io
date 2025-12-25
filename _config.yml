@@ -1,0 +1,14 @@
+title: Allen Goodman
+description: Personal website and blog
+url: https://0x00b1.github.io
+author: Allen Goodman
+
+markdown: kramdown
+highlighter: rouge
+
+permalink: /blog/:year/:month/:day/:title/
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
