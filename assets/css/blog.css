@@ -432,7 +432,6 @@ figcaption {
 
 /* Name / Identifier */
 .highlight .n,
-.highlight .nb,
 .highlight .ni,
 .highlight .nl {
     color: var(--color-text);
