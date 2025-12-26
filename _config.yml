@@ -6,6 +6,9 @@ author: Allen Goodman
 markdown: kramdown
 highlighter: rouge
 
+kramdown:
+  math_engine: null
+
 permalink: /blog/:year/:month/:day/:title/
 
 exclude:
