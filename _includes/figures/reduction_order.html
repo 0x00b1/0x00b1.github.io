@@ -1,0 +1,104 @@
+{% comment %}
+Reduction Order Visualizer
+Demonstrates non-associativity and rounding at termination boundary.
+
+Usage:
+  {% include figures/reduction_order.html fig_id="red1" %}
+
+Parameters:
+  - fig_id: Unique identifier for this figure instance (required)
+  - caption: Optional caption text
+{% endcomment %}
+
+<figure class="interactive-figure" id="{{ include.fig_id }}">
+  <div class="figure-controls">
+    <div class="figure-control">
+      <label for="{{ include.fig_id }}-dtype">Precision:</label>
+      <select id="{{ include.fig_id }}-dtype">
+        <option value="fp32">FP32</option>
+        <option value="bf16">BF16-like</option>
+        <option value="fp16">FP16-like</option>
+      </select>
+    </div>
+    <div class="figure-control">
+      <label for="{{ include.fig_id }}-policy">Accumulation:</label>
+      <select id="{{ include.fig_id }}-policy">
+        <option value="fragile">Round after each add (fragile)</option>
+        <option value="safe">Accumulate in FP32 (safe)</option>
+      </select>
+    </div>
+    <div class="figure-control">
+      <label for="{{ include.fig_id }}-tol">Tolerance:</label>
+      <input type="number" id="{{ include.fig_id }}-tol" value="0.001" step="0.0001" min="0">
+    </div>
+  </div>
+
+  <div class="figure-controls">
+    <div class="figure-buttons">
+      <button class="figure-btn" id="{{ include.fig_id }}-large-first">Large-first</button>
+      <button class="figure-btn" id="{{ include.fig_id }}-small-first">Small-first</button>
+      <button class="figure-btn" id="{{ include.fig_id }}-shuffle">Shuffle</button>
+      <button class="figure-btn" id="{{ include.fig_id }}-reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="reduction-panel">
+    <div class="reduction-table-container">
+      <table class="reduction-table">
+        <thead>
+          <tr>
+            <th>i</th>
+            <th>Addend</th>
+            <th>Running Sum</th>
+          </tr>
+        </thead>
+        <tbody id="{{ include.fig_id }}-table-body">
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <div class="reduction-result">
+        <div class="reduction-result-label">Final Sum (S)</div>
+        <div class="reduction-result-value" id="{{ include.fig_id }}-final-sum">--</div>
+      </div>
+      <div class="reduction-result" style="margin-top: 0.75em;">
+        <div class="reduction-result-label">Tolerance</div>
+        <div class="reduction-result-value" id="{{ include.fig_id }}-tol-display">0.001</div>
+      </div>
+      <div class="reduction-decision" id="{{ include.fig_id }}-decision">
+        --
+      </div>
+      <div class="reduction-margin-bar">
+        <div class="reduction-margin-fill" id="{{ include.fig_id }}-margin-fill"></div>
+        <div class="reduction-tol-marker" id="{{ include.fig_id }}-tol-marker"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reduction-addends">
+    <label for="{{ include.fig_id }}-addends" style="font-size: 0.85em; color: var(--color-text-muted);">
+      Addends (comma-separated):
+    </label>
+    <textarea id="{{ include.fig_id }}-addends"></textarea>
+  </div>
+
+  {% if include.caption %}
+  <figcaption>{{ include.caption }}</figcaption>
+  {% endif %}
+</figure>
+
+<script>
+(function() {
+  window.__FIGS__ = window.__FIGS__ || [];
+  window.__FIGS__.push({
+    type: 'reduction_order',
+    figId: '{{ include.fig_id }}',
+    dataUrl: null,
+    options: {
+      defaultAddends: [0.00035, 0.00028, 0.00022, 0.00018, 0.00012, 0.00008, 0.00005, 0.00003],
+      defaultTol: 0.001
+    }
+  });
+})();
+</script>

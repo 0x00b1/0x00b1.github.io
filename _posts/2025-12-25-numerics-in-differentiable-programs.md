@@ -1,16 +1,16 @@
 ---
 layout: post
-title: "Numerics in Differentiable Programs"
+title: "Numerics in World Models"
 date: 2025-12-25
 ---
 
-## Numerics in Differentiable Programs
+<div class="introduction" markdown="1">
 
 Numerical accuracy is an unfashionable subject in contemporary machine learning. In many contexts it is also, in a narrow sense, rationally unfashionable: the marginal utility of one more bit of floating-point fidelity is often dominated by the utility of more throughput, less latency, or more memory headroom. Rendering pipelines and graphics hardware institutionalized this tradeoff decades ago. Modern inference does the same thing with quantization, knowingly discarding information in order to meet deployment constraints.
 
 The trouble begins when one forgets that training is not inference. Training is not a single evaluation; it is an iterative numerical procedure in which finite-precision error is not merely present, but coupled into the trajectory of the parameters and therefore able to be amplified. In program-like models, *ulp*-scale changes—where an **ulp** is the *unit in the last place*, the spacing between adjacent representable floating-point numbers at a given magnitude—can flip a solver iteration or event timing, which is a discrete change with long-horizon consequences.
 
-The regimes I care about here are **differentiable world models**: training setups where the forward pass includes a *stateful, environment-like program*—a simulator, planner, renderer, or solver-heavy pipeline unrolled over time and differentiated end-to-end. I am **not** using “world model” in the narrower sense of a purely learned latent dynamics predictor; I mean “the world” as an executed program, potentially with learned components embedded inside it.
+The regimes I care about here are **world models**: training setups where the forward pass includes a *stateful, environment-like program*—a simulator, planner, renderer, or solver-heavy pipeline unrolled over time and differentiated end-to-end. I am **not** using "world model" in the narrower sense of a purely learned latent dynamics predictor; I mean "the world" as an executed program, potentially with learned components embedded inside it.
 
 Two terms will recur:
 
@@ -19,11 +19,11 @@ Two terms will recur:
 
 Stated plainly:
 
-> In differentiable world models, numerical settings are not backend trivia. They change the program, and therefore they change the gradient field you are optimizing.
+> In world models, numerical settings are not backend trivia. They change the program, and therefore they change the gradient field you are optimizing.
 
----
+</div>
 
-## A running example: a bouncing ball that is “a program,” not just a function
+## Bucephalus Bouncing Ball <a href="https://aphextwin.bandcamp.com/track/bucephalus-bouncing-ball" target="_blank" rel="noopener" class="track-link" title="Aphex Twin – Bucephalus Bouncing Ball"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
 To keep the discussion concrete without turning it into a numerical analysis textbook, I will use a small running example throughout: a differentiable bouncing ball with ground contact, unrolled over a horizon $T$, with a **learnable parameter inside the simulator**.
 
@@ -33,19 +33,8 @@ At step $t$ the state is position $y_t$ and velocity $v_t$. Gravity is $g$. Step
 
 There are two plausible contact implementations that look similar in forward simulation under many settings but behave very differently once you differentiate through them, especially over long horizons and near thresholds.
 
-In a penalty (soft) contact model, define penetration
-
-$$
-p_t = \max(0, -y_t)
-$$
-
-and apply a contact force
-
-$$
-f^c_t = k \cdot p_t
-$$
-
-(optionally with damping). Large stiffness $k$ makes the dynamics stiff.
+In a penalty (soft) contact model, define penetration, $p_t = \max(0, -y_t)$, and apply a contact force, $f^c_t = k \cdot p_t$,
+optionally with damping. Large stiffness $k$ makes the dynamics stiff.
 
 In a projection / impulse model, after an unconstrained step you enforce $y \ge 0$ (and optionally restitution) using an iterative projection. You iterate until a residual (for example, total penetration) is below a tolerance `tol` or you hit a cap `max_iter`. The iteration count is therefore part of the computation.
 
@@ -98,11 +87,9 @@ def world_step(y, v, u, *, h, g, k,
     return y, v, p, it
 ```
 
-Even in this toy, the structural ingredients that make differentiable world model numerics different from "just a deeper network" are already present: long-horizon statefulness (outputs become inputs), nonsmooth events (contact activates at $y=0$), algorithmic inner loops (projection iterations and stopping criteria), and reductions that can sit on termination boundaries (the summed penetration in the stopping rule).
+Even in this toy, the structural ingredients that make world model numerics different from "just a deeper network" are already present: long-horizon statefulness (outputs become inputs), nonsmooth events (contact activates at $y=0$), algorithmic inner loops (projection iterations and stopping criteria), and reductions that can sit on termination boundaries (the summed penetration in the stopping rule).
 
----
-
-## Training is a discrete dynamical system (and gradients live on its trajectory)
+## Strings of Life <a href="https://networkrecords.bandcamp.com/track/strings-of-life" target="_blank" rel="noopener" class="track-link" title="Rhythim Is Rhythim – Strings of Life"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
 If you work in PyTorch long enough, you encounter failures that are simultaneously mundane and hard to reason about: a run that is stable in full precision and unstable under mixed precision; a model that trains on one GPU but not another; a refactor that is algebraically equivalent but changes convergence; a loss curve that looks well behaved until the first step that produces NaNs. These incidents are often treated as folklore—seed everything, lower the learning rate, add gradient clipping, try a different optimizer—and those interventions sometimes help. These are often compensatory measures that treat symptoms rather than the numerical program.
 
@@ -110,13 +97,13 @@ The pattern underneath is less mystical. Training is an iterative numerical proc
 
 If you want a mental picture, imagine plotting $y_t$ versus $t$ for two runs that are identical except for a tiny numerical perturbation. The curves lie on top of each other until the moment one trajectory crosses the contact threshold a single step earlier. At that instant the **first-contact index differs by one step**, and from there the bounce phase drifts; subsequent contacts occur at different steps, and by the end of the horizon the histories are visibly different. The “diagram” is two nearly coincident trajectories that fork at the first threshold flip.
 
-In the bouncing-ball rollout, this sensitivity is visible even before talking about floating point. Changing $h$ shifts the bounce timing; changing $k$ changes stiffness and stability margins; changing the projection tolerance `tol` changes the number of inner iterations. These are not implementation details; they are definitional parameters of the computation. Differentiable world models force this point into the foreground because the forward pass contains more parameters that define an algorithm, not merely parameters that define a smooth function.
+In the bouncing-ball rollout, this sensitivity is visible even before talking about floating point. Changing $h$ shifts the bounce timing; changing $k$ changes stiffness and stability margins; changing the projection tolerance `tol` changes the number of inner iterations. These are not implementation details; they are definitional parameters of the computation. world models force this point into the foreground because the forward pass contains more parameters that define an algorithm, not merely parameters that define a smooth function.
 
----
+{% include figures/trajectory_fork.html fig_id="fork1" data="/assets/data/fork_runs.json" caption="Two runs with different termination policies. The trajectories coincide until one crosses a contact threshold earlier, causing visible divergence. Hover to compare values at each timestep." %}
 
-## The numerical program
+## Frequency <a href="https://warprecords.bandcamp.com/album/frequencies" target="_blank" rel="noopener" class="track-link" title="LFO – Frequencies"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
-In conventional discussions, numerical accuracy is often framed as the gap between an ideal real-number computation and the finite-precision result of evaluating the same mathematical expression. In differentiable world models, that framing is incomplete because the forward computation is itself a numerical method.
+In conventional discussions, numerical accuracy is often framed as the gap between an ideal real-number computation and the finite-precision result of evaluating the same mathematical expression. In world models, that framing is incomplete because the forward computation is itself a numerical method.
 
 A simulator is not a single function; it is an approximation procedure. An integrator is a discretization of a continuous system, parameterized by a step size. An iterative solver is a convergence process, parameterized by a tolerance and a stopping criterion. A differentiable renderer is often an estimator, parameterized by sample counts and variance-reduction choices, and it is usually made differentiable by replacing nonsmooth events (visibility, occlusion) with surrogates.
 
@@ -130,19 +117,17 @@ To speak precisely without turning this into a numerical analysis textbook, it h
 
 > **Precision** is the granularity and dynamic range of the number system (FP32 vs FP16 vs bfloat16; reduced-mantissa internal modes). **Accuracy** is closeness to an intended reference semantics. **Stability** is whether small perturbations remain controlled or are amplified by the computation. **Conditioning** is sensitivity of the underlying problem; even a stable algorithm cannot overcome severe ill-conditioning. **Discretization/modeling error** is the gap between a continuous or idealized process and the discrete approximation you simulate. Instability can come from either the method or the representation; they often co-occur.
 
-Differentiable world models force discretization error into the foreground because it exists even in exact arithmetic; yet it interacts with floating-point error, because discretization stability governs whether finite-precision perturbations remain benign.
+World models force discretization error into the foreground because it exists even in exact arithmetic; yet it interacts with floating-point error, because discretization stability governs whether finite-precision perturbations remain benign.
 
----
+## Mentasm <a href="https://joeybeltram-rs.bandcamp.com/track/mentasm" target="_blank" rel="noopener" class="track-link" title="Second Phase – Mentasm"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
-## When tiny rounding becomes a different program
-
-The mechanism that turns “tiny numerical differences” into qualitatively meaningful behavior in differentiable world models is not that the rounding error is larger. It is that the program is more sensitive: many programs make decisions based on quantities computed by reductions, and those decisions change the computation path.
+The mechanism that turns “tiny numerical differences” into qualitatively meaningful behavior in world models is not that the rounding error is larger. It is that the program is more sensitive: many programs make decisions based on quantities computed by reductions, and those decisions change the computation path.
 
 A clarifier up front: **not all rounding changes the “program.”** In smooth regions of a computation, rounding typically perturbs outputs continuously. The qualitative change happens when those perturbations interact with **discrete control flow**: events, stopping rules, acceptance tests—anything that makes a piecewise-defined program path.
 
 Floating-point arithmetic is not associative. The order in which a reduction accumulates terms affects the final rounded result. In scalar code this can often be ignored. In parallel code it cannot, because parallel reductions impose a reduction tree, and that tree depends on tiling, vectorization, warps, blocks, kernel selection, and sometimes nondeterministic scheduling.
 
-In a conventional neural network, a low-order change in a reduction often manifests as a low-order change in an activation. Over many training steps, that can still lead to trajectory divergence, but the divergence often looks like noise. In differentiable world models, reductions frequently sit on decision boundaries: force accumulation, residual norms, constraint penalty sums, Monte Carlo integrals. These are the quantities that determine solver termination, event triggering, and stability.
+In a conventional neural network, a low-order change in a reduction often manifests as a low-order change in an activation. Over many training steps, that can still lead to trajectory divergence, but the divergence often looks like noise. In world models, reductions frequently sit on decision boundaries: force accumulation, residual norms, constraint penalty sums, Monte Carlo integrals. These are the quantities that determine solver termination, event triggering, and stability.
 
 A minimal mechanism is:
 
@@ -164,7 +149,9 @@ $$
 
 then one run sees $S_A < \texttt{tol}$ and exits the loop; the other sees $S_B \ge \texttt{tol}$ and performs one more projection iteration. That extra iteration is not a “low-order digit” change. It is a different program path: the state after the step changes discontinuously with respect to the reduction outcome, and over a horizon it can shift the entire event history.
 
-This connects directly to differentiation-through-unrolled-solvers: as a function of inputs and parameters, the **iteration count is piecewise constant**. If you unroll “the iterations that actually ran,” the overall mapping is **piecewise smooth**, and the gradient you get is the derivative of the executed branch of the loop. Along iteration-count boundaries, that derivative can **jump**.
+This connects directly to differentiation-through-unrolled-solvers: as a function of inputs and parameters, the **iteration count is piecewise constant**. If you unroll "the iterations that actually ran," the overall mapping is **piecewise smooth**, and the gradient you get is the derivative of the executed branch of the loop. Along iteration-count boundaries, that derivative can **jump**.
+
+{% include figures/it_discontinuity.html fig_id="disc1" data="/assets/data/it_sweep.json" caption="Iteration count it(k) is piecewise constant. At boundaries where the iteration count changes, the gradient can jump discontinuously. The 'AMP (unsafe)' mode shows larger gradient discontinuities due to reduced-precision termination." %}
 
 If termination is based on a global reduction, it is often worth asking whether a single global sum should be the branch point at all. Per-instance termination, a small amount of hysteresis in the stopping rule, or computing the reduction in FP32/FP64 (ideally with a deterministic accumulation order) can all make the program less knife-edge without changing the high-level intent.
 
@@ -172,9 +159,7 @@ This is also where determinism controls become valuable, and where they are ofte
 
 The value of determinism is attribution. It reduces the confounding variable of schedule noise and atomic interleavings so you can ask controlled questions about the numerical program: if I change TF32 policy, does the first contact step change? If I change `tol`, does the iteration count distribution change? With determinism off, quantities like “first contact step” and “projection iteration count per step” can vary run-to-run when computation sits near a termination boundary; with determinism on, they often stabilize into exact reproducibility on a fixed configuration. That does not mean the computation is more accurate. It means you can now observe causality.
 
----
-
-## Micro-demo 1: reduction order flips a termination decision
+## Octagon <a href="https://bleep.com/release/8324-basic-channel-octagon" target="_blank" rel="noopener" class="track-link" title="Basic Channel – Octagon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
 The following is a deliberately minimal, *deterministic* reproduction of the mechanism above. It is not meant to model a specific GPU reduction tree; it shows that **different accumulation orders in finite precision can cross a termination boundary**, changing control flow.
 
@@ -213,13 +198,13 @@ print("S_small_first=", float(S_small_first), " stop?", bool(S_small_first < tol
 # S_small_first= 0.0009765625      stop? False
 ```
 
-Both executions are “numerically reasonable,” but they do different things at the termination boundary. In a solver, that translates into a different iteration count. In an unrolled solver, a different iteration count means a different executed program and, consequently, a potentially different gradient.
+Both executions are "numerically reasonable," but they do different things at the termination boundary. In a solver, that translates into a different iteration count. In an unrolled solver, a different iteration count means a different executed program and, consequently, a potentially different gradient.
 
----
+{% include figures/reduction_order.html fig_id="red1" caption="Interactive demonstration of how accumulation order and precision affect the final sum. Try different orderings and precision modes to see how the same addends can produce different termination decisions." %}
 
-## Long-horizon sensitivity: integration, solves, and nonsmooth events
+## Wavejumper <a href="https://drexciya.bandcamp.com/album/black-sea-wavejumper" target="_blank" rel="noopener" class="track-link" title="Drexciya – Wavejumper"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
-At this point it is tempting to treat backend differences as the main story. They matter, but they are still secondary to the central amplifier in differentiable world models: long-horizon, stateful algorithms.
+At this point it is tempting to treat backend differences as the main story. They matter, but they are still secondary to the central amplifier in world models: long-horizon, stateful algorithms.
 
 Consider a parameterized discrete dynamical system
 
@@ -229,19 +214,19 @@ $$
 
 with a loss accumulated along the trajectory. Reverse-mode differentiation of an unrolled program propagates sensitivities backward via Jacobian products along the rollout. Even before considering floating-point effects, the numerical difficulty is visible: if the relevant Jacobians have singular values greater than one in important directions, sensitivities grow; if less than one, they decay. In stiff systems both regimes can occur across different modes; in chaotic regimes sensitivity can grow rapidly with horizon.
 
-The computed gradient is therefore a fragile object even in exact arithmetic. Finite-precision effects, reduction order, discretization perturbations, and branch flips are injected into this propagation and can become dominant over long horizons. This is why it is misleading to conceptualize differentiable world model rollouts as “just deeper networks.” The depth is algorithmic depth: repeated application of a transition operator that embodies physics and event logic.
+The computed gradient is therefore a fragile object even in exact arithmetic. Finite-precision effects, reduction order, discretization perturbations, and branch flips are injected into this propagation and can become dominant over long horizons. This is why it is misleading to conceptualize world model rollouts as “just deeper networks.” The depth is algorithmic depth: repeated application of a transition operator that embodies physics and event logic.
 
 Time integration makes this concrete. An ODE integrator with step size $h$ is a discretization of a continuous system. Its stability properties are governed by the method and by $h$. If the system is stiff, explicit methods may require very small $h$ to be stable. If $h$ is too large, the discretized program can diverge even in exact arithmetic; floating-point precision merely shifts the boundary of failure.
 
-When you differentiate through the integrator, stability can become even more delicate: forward trajectories may remain bounded while adjoint or sensitivity variables blow up, because backward propagation reflects the sensitivity of the discretized mapping. This is one of the most common sources of confusion in practice: the forward simulation “looks fine,” but the first NaN appears during backpropagation. In differentiable world models, this is not an oddity; it is a predictable consequence of long-horizon sensitivity propagation through a discretized method.
+When you differentiate through the integrator, stability can become even more delicate: forward trajectories may remain bounded while adjoint or sensitivity variables blow up, because backward propagation reflects the sensitivity of the discretized mapping. This is one of the most common sources of confusion in practice: the forward simulation “looks fine,” but the first NaN appears during backpropagation. In world models, this is not an oddity; it is a predictable consequence of long-horizon sensitivity propagation through a discretized method.
 
 Penalty contact makes stiffness explicit. Increasing $k$ sharpens the contact response but also increases stiffness. With an explicit integrator, large $k$ can be forward-stable only for sufficiently small $h$. It is common to find regimes where the forward rollout appears stable and physical enough, yet gradients spike near contact boundaries and eventually overflow or produce NaNs in backward.
 
 A similar phenomenon occurs for implicit methods and constraint projections, which are ubiquitous in realistic simulators. Many physically constrained systems compute a state by solving an implicit equation $g(x,\theta)=0$, either exactly or approximately via an iterative solver. Differentiating through an iterative solver by unrolling iterations is conceptually straightforward but can be numerically punishing: memory costs grow with iteration count, and the gradient is sensitive to the solver's convergence path. The alternative is implicit differentiation: under appropriate regularity assumptions, $\partial x/\partial \theta$ can be expressed via a linear system involving $\partial g/\partial x$. The important practical consequence is that the backward computation now contains its own numerical method: it requires solving linear systems (often repeatedly), and conditioning and solver tolerances become explicit components of the gradient.
 
-A caveat matters in exactly the regimes differentiable world models inhabit: contact, friction, and complementarity formulations are often **nonsmooth**, and the regularity conditions behind implicit differentiation (differentiability of $g$ and invertibility / well-conditioning of $\partial g/\partial x$ at the solution) can fail without smoothing, regularization, or a reformulation. In practice, many systems that use implicit sensitivities do so on a regularized surrogate of the physical constraint set.
+A caveat matters in exactly the regimes world models inhabit: contact, friction, and complementarity formulations are often **nonsmooth**, and the regularity conditions behind implicit differentiation (differentiability of $g$ and invertibility / well-conditioning of $\partial g/\partial x$ at the solution) can fail without smoothing, regularization, or a reformulation. In practice, many systems that use implicit sensitivities do so on a regularized surrogate of the physical constraint set.
 
-Nonsmoothness is the other structural difference. Many differentiable world model programs are inherently nonsmooth: contact and friction laws, collision handling, visibility and occlusion, branch-based event logic, thresholding and clamping used for stability. Classical derivatives often do not exist at these events. Differentiable implementations therefore employ surrogates: smooth approximations to contact, softened visibility, differentiable relaxations of discrete decisions, stochastic estimators with reparameterization tricks. These surrogates are not mere implementation details; they define what gradient means and therefore define the effective optimization problem.
+Nonsmoothness is the other structural difference. Many world model programs are inherently nonsmooth: contact and friction laws, collision handling, visibility and occlusion, branch-based event logic, thresholding and clamping used for stability. Classical derivatives often do not exist at these events. Differentiable implementations therefore employ surrogates: smooth approximations to contact, softened visibility, differentiable relaxations of discrete decisions, stochastic estimators with reparameterization tricks. These surrogates are not mere implementation details; they define what gradient means and therefore define the effective optimization problem.
 
 In the bouncing-ball toy, the hard event is "contact activates at $y=0$." Even in penalty contact, activation is thresholded by $p_t=\max(0,-y_t)$, which is nonsmooth at zero. Replacing $\max(0,\cdot)$ with a smooth approximation (for example, a softplus with width $\varepsilon$) does not merely make gradients "nicer." It defines a different optimization problem: you are now optimizing a system with softened contact near the boundary. This is often the right move, and the right framing is to treat it as a modeling choice, not a numerical patch.
 
@@ -249,9 +234,7 @@ A useful aside that appears in many real simulators is event logic that flips to
 
 Stochasticity complicates diagnosis in the same way. Estimator variance (for example in differentiable rendering) is conceptually distinct from floating-point perturbations, but in a sensitive program the two can interact: a small change in sampling sequence and a small change in reduction order can both flip the same event. This is the practical justification for deterministic debugging modes and aggressive control of randomness during diagnosis. The goal is not to eliminate stochasticity from the method; it is to isolate sources of variation so instability can be attributed and mitigated.
 
----
-
-## Micro-demo 2: reduced precision flips solver termination (and deletes a gradient)
+## Depressurization <a href="https://cloneclassiccuts.bandcamp.com/track/depressurization" target="_blank" rel="noopener" class="track-link" title="Drexciya – Depressurization"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
 The previous demo isolates reduction-order sensitivity in the abstract. This one shows the same mechanism in a tiny unrolled "solver" where **a learnable parameter $k$** lives *inside* the iterative correction step.
 
@@ -442,19 +425,17 @@ What to look for:
 * The penetration history differs (`max |Δp_t| ...` is nonzero), because one run applied a correction and the other did not.
 * Most importantly: if the reduced-precision run exits before ever executing `y = y + alpha * k * p`, then the learnable parameter (k) is *unused* and the loss may not require grad w.r.t. (k) at all. Promoting the termination reduction to FP32 typically restores the FP32 iteration behavior and therefore restores gradients.
 
----
-
-## In PyTorch, the numerical program includes backend pathways
+## Bug in the Bass Bin <a href="https://k7records.bandcamp.com/track/bug-in-the-bass-bin" target="_blank" rel="noopener" class="track-link" title="Innerzone Orchestra – Bug in the Bass Bin"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
 In ordinary deep learning, it is tempting to treat numerical behavior as a property of an operator and a dtype. PyTorch makes that abstraction difficult to sustain, because PyTorch is not a single arithmetic model. It is a heterogeneous tensor system: multiple devices and backends, multiple kernel families, optional compilation and fusion, sparse representations, complex dtypes, mixed precision and quantization.
 
-The numerical behavior you observe is therefore an emergent property of an execution pathway. A minimal abstraction is the tuple “operator, dtype policy, device/backend, algorithm/kernel variant.” In differentiable world models, that tuple is not enough. You also have discretization choices (step sizes), solver tolerances and stopping criteria, event handling and surrogate smoothing, and estimator randomness and seeding. This enlarged object—the numerical program—is part of what you are experimenting with.
+The numerical behavior you observe is therefore an emergent property of an execution pathway. A minimal abstraction is the tuple “operator, dtype policy, device/backend, algorithm/kernel variant.” In world models, that tuple is not enough. You also have discretization choices (step sizes), solver tolerances and stopping criteria, event handling and surrogate smoothing, and estimator randomness and seeding. This enlarged object—the numerical program—is part of what you are experimenting with.
 
 PyTorch’s internal precision modes matter in ways that surprise practitioners because user-visible dtypes do not fully specify internal arithmetic. On NVIDIA GPUs, TensorFloat32 (TF32) tensor cores can accelerate float32 matmuls and convolutions by rounding inputs to a reduced mantissa while maintaining float32 dynamic range via float32 accumulation. PyTorch’s CUDA semantics notes describe TF32 in these terms, and they emphasize that matmuls and convolutions are controlled separately by corresponding flags.  PyTorch also exposes `torch.set_float32_matmul_precision` to control float32 matrix multiplication internal precision on CUDA; some settings permit TF32-style pathways for float32 matmuls while others more strongly favor full float32 internal computation, and the documentation describes the intended tradeoff between speed and numerical fidelity. 
-In many deep learning workloads, TF32 is acceptable and materially improves throughput. The sharper issue in differentiable world models is where linear algebra sits inside iterative methods: least squares steps, Gauss–Newton updates, implicit constraint solves, or backward passes that solve linear systems. In those contexts, reduced mantissa precision can influence residual reduction and iteration counts—and because solver termination is part of the program, those differences propagate into gradients. In practice it can be useful to treat “matmul inside a solver or termination-critical path” differently from “matmul inside a feature extractor,” even when both are nominally float32.
+In many deep learning workloads, TF32 is acceptable and materially improves throughput. The sharper issue in world models is where linear algebra sits inside iterative methods: least squares steps, Gauss–Newton updates, implicit constraint solves, or backward passes that solve linear systems. In those contexts, reduced mantissa precision can influence residual reduction and iteration counts—and because solver termination is part of the program, those differences propagate into gradients. In practice it can be useful to treat “matmul inside a solver or termination-critical path” differently from “matmul inside a feature extractor,” even when both are nominally float32.
 
 Mixed precision illustrates the same “numerical program” lens. PyTorch’s automatic mixed precision facilities are best understood as dtype policies rather than global dtype switches. Autocast chooses the precision for operations within a region to improve performance while maintaining accuracy; the recommended training pattern combines autocast with `torch.amp.GradScaler`.  The documentation also notes that older AMP interfaces have been consolidated in newer `torch.amp` APIs. 
-In conventional neural training, AMP often “just works” because many networks tolerate small perturbations and key primitives have been engineered for mixed precision. In differentiable world models, the dominant failure mode is frequently representability rather than mere rounding. Programs contain quantities that can be legitimately outside FP16’s comfortable dynamic range: accumulated energies, long sums of forces, tiny residuals, penalty terms with large coefficients, and inverse scales that explode when denominators approach zero. Mixed precision also interacts with solver logic. Residual-based termination criteria can behave differently if residual norms are computed or accumulated in reduced precision; a solver may terminate early or fail to terminate. Because the solver path is part of the differentiated program, this changes gradients.
+In conventional neural training, AMP often “just works” because many networks tolerate small perturbations and key primitives have been engineered for mixed precision. In world models, the dominant failure mode is frequently representability rather than mere rounding. Programs contain quantities that can be legitimately outside FP16’s comfortable dynamic range: accumulated energies, long sums of forces, tiny residuals, penalty terms with large coefficients, and inverse scales that explode when denominators approach zero. Mixed precision also interacts with solver logic. Residual-based termination criteria can behave differently if residual norms are computed or accumulated in reduced precision; a solver may terminate early or fail to terminate. Because the solver path is part of the differentiated program, this changes gradients.
 
 One pattern that often helps is to treat precision not as a global switch but as a localized policy: allow reduced precision in high-throughput arithmetic, while explicitly enforcing FP32 computation (or at least FP32 accumulation) around **decision and termination boundaries**—termination checks, event detection, and residual computations. A minimal sketch looks like:
 
@@ -481,7 +462,7 @@ for batch in data:
 
 This does not make an unstable discretization stable, and it does not remove nonsmoothness pathologies. It increases representational margin and reduces precision-induced perturbations in the places most likely to flip events or termination.
 
-Quantization is a more explicit example of numerical policy as program modification. In differentiable world models it is attractive for memory and throughput reasons, especially when a hybrid system contains learned components one wishes to deploy on constrained hardware. But the right conceptual framing is that quantization changes the program, and quantization-aware training optimizes a surrogate.
+Quantization is a more explicit example of numerical policy as program modification. In world models it is attractive for memory and throughput reasons, especially when a hybrid system contains learned components one wishes to deploy on constrained hardware. But the right conceptual framing is that quantization changes the program, and quantization-aware training optimizes a surrogate.
 
 PyTorch's fake quantization modules make this explicit. The documentation for `torch.ao.quantization.fake_quantize.FakeQuantize` describes it as simulating quantize and dequantize operations during training time, and it specifies the forward computation as a clamp-round-scale transformation:
 
@@ -492,18 +473,16 @@ x_{\text{out}} =
 $$
 
 
-The presence of `round` and `clamp` makes the forward nonsmooth; quantization-aware training relies on surrogate gradient conventions. In differentiable world models, the question is not “how close is the quantized computation to the real-number one,” but whether the surrogate-trained system behaves acceptably under quantized inference at the level that matters: event timing, termination behavior, and long-horizon stability. Quantizing a perception encoder may be benign; quantizing state variables that determine contact activation or solver termination may not be, unless you intentionally redesign the event logic to be robust under that representation.
+The presence of `round` and `clamp` makes the forward nonsmooth; quantization-aware training relies on surrogate gradient conventions. In world models, the question is not “how close is the quantized computation to the real-number one,” but whether the surrogate-trained system behaves acceptably under quantized inference at the level that matters: event timing, termination behavior, and long-horizon stability. Quantizing a perception encoder may be benign; quantizing state variables that determine contact activation or solver termination may not be, unless you intentionally redesign the event logic to be robust under that representation.
 
-Two final corners are worth noting because they show that “numerics” includes conventions and representations, not only floating-point formats, and because in differentiable world models these conventions can become decision-critical near singularities or event thresholds.
+Two final corners are worth noting because they show that “numerics” includes conventions and representations, not only floating-point formats, and because in world models these conventions can become decision-critical near singularities or event thresholds.
 
 PyTorch supports autograd for complex tensors, and its documentation states that the gradient computed is the conjugate Wirtinger derivative, which is the convention that makes standard optimizers behave sensibly for real-valued losses on complex parameters.  In practice, complex pipelines often become numerically delicate where complex-to-real mappings introduce singular behavior: magnitudes $|z|$ and normalizations $z/|z|$ are ill-behaved near $z=0$, and phases $\arg(z)$ introduce discontinuities across branch cuts. Finite precision can drive small magnitudes to exact zero, and divide-by-magnitude patterns can then produce explosive sensitivities. When gradient checking such pipelines, PyTorch’s `torch.autograd.gradcheck` notes that for most complex functions considered for optimization, no notion of Jacobian exists in the usual sense; gradcheck verifies consistency of Wirtinger and conjugate Wirtinger derivatives under the assumption that the overall function has a real-valued output. 
-Sparse and irregular computation is another case where representation semantics matter. Sparsity is pervasive in differentiable world models: neighbor interactions induce sparse patterns, contact graphs are sparse, mesh adjacency is sparse, constraint Jacobians are sparse. When one moves from dense to sparse representations, one often moves from smooth, regular kernels to irregular accumulation that may involve reductions and atomics, whose order and scheduling can matter for floating point.
+Sparse and irregular computation is another case where representation semantics matter. Sparsity is pervasive in world models: neighbor interactions induce sparse patterns, contact graphs are sparse, mesh adjacency is sparse, constraint Jacobians are sparse. When one moves from dense to sparse representations, one often moves from smooth, regular kernels to irregular accumulation that may involve reductions and atomics, whose order and scheduling can matter for floating point.
 
-PyTorch's sparse COO representation makes this concrete. The documentation for `torch.sparse_coo_tensor` notes that it returns an uncoalesced tensor when `is_coalesced` is unspecified or `None`. The sparse documentation warns about coalescing semantics and how values are accessed in a way compatible with autograd. The `Tensor.values()` documentation states that it can only be called on a coalesced sparse tensor. Coalescing combines duplicates by summation; summation is a reduction; reduction order matters; and sparse kernels may accumulate through atomics depending on the operation. In differentiable world models, where sparse structures often control event logic (contacts, neighbors), these details can be amplified into observable behavioral differences over long horizons.
+PyTorch's sparse COO representation makes this concrete. The documentation for `torch.sparse_coo_tensor` notes that it returns an uncoalesced tensor when `is_coalesced` is unspecified or `None`. The sparse documentation warns about coalescing semantics and how values are accessed in a way compatible with autograd. The `Tensor.values()` documentation states that it can only be called on a coalesced sparse tensor. Coalescing combines duplicates by summation; summation is a reduction; reduction order matters; and sparse kernels may accumulate through atomics depending on the operation. In world models, where sparse structures often control event logic (contacts, neighbors), these details can be amplified into observable behavioral differences over long horizons.
 
----
-
-## Practical checklist: making the numerical program observable and less knife-edge
+## We Have Arrived <a href="https://marcacardipane.bandcamp.com/track/we-have-arrived-original-mix" target="_blank" rel="noopener" class="track-link" title="Mescalinum United – We Have Arrived"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></a>
 
 The individual points above compound because the model is a stateful program with events, termination boundaries, and long-horizon sensitivity. A short checklist that matches that reality:
 
@@ -538,14 +517,12 @@ The individual points above compound because the model is a stateful program wit
 
 * Use determinism controls to stabilize confounders and attribute causality; treat determinism as observability, not accuracy.
 
----
-
-## Closing
+<div class="conclusion" markdown="1">
 
 Most of the individual facts in this post are not new. Reductions are non-associative; determinism is for debugging; TF32 and internal precision modes can change numerical behavior; mixed precision requires scaling; quantization uses surrogate gradients; complex autograd follows Wirtinger calculus conventions; sparse representations have coalescing semantics.
 
-What changes in the differentiable world model regime is the way these facts compound. Differentiable world models put long-horizon sensitivity, iterative numerical methods, nonsmooth events, and termination boundaries at the core of the computation. The numerical program—the discretized, finite-precision, tolerance-parameterized, branch-containing algorithm you actually run—becomes part of the definition of the objective you are optimizing.
+What changes in the world model regime is the way these facts compound. World models put long-horizon sensitivity, iterative numerical methods, nonsmooth events, and termination boundaries at the core of the computation. The numerical program—the discretized, finite-precision, tolerance-parameterized, branch-containing algorithm you actually run—becomes part of the definition of the objective you are optimizing.
 
 Backend heterogeneity and precision policies matter not because we have become obsessed with ulps, but because we are differentiating programs whose qualitative behavior can change when small perturbations alter event sequences or solver paths. That is also why "accuracy" is not a single notion here: you are not differentiating an idealized continuous world; you are differentiating $F_{\theta,h,\mathrm{tol},\ldots}$, the implemented map with all of its numerical choices.
 
-When the model is a world, numerics are not the fine print. They are part of the experiment.
+</div>

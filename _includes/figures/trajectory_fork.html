@@ -1,0 +1,69 @@
+{% comment %}
+Trajectory Fork Viewer
+Compares two runs A/B and shows where trajectories diverge.
+
+Usage:
+  {% include figures/trajectory_fork.html fig_id="fork1" data="/assets/data/fork_runs.json" %}
+
+Parameters:
+  - fig_id: Unique identifier for this figure instance (required)
+  - data: Path to JSON data file (required)
+  - caption: Optional caption text
+{% endcomment %}
+
+<figure class="interactive-figure" id="{{ include.fig_id }}">
+  <div class="figure-controls">
+    <div class="figure-control">
+      <label for="{{ include.fig_id }}-run-a">Run A:</label>
+      <select id="{{ include.fig_id }}-run-a"></select>
+    </div>
+    <div class="figure-control">
+      <label for="{{ include.fig_id }}-run-b">Run B:</label>
+      <select id="{{ include.fig_id }}-run-b"></select>
+    </div>
+    <div class="figure-control">
+      <label>
+        <input type="checkbox" id="{{ include.fig_id }}-show-events" checked>
+        Show event markers
+      </label>
+    </div>
+  </div>
+
+  <div class="figure-legend">
+    <div class="figure-legend-item">
+      <span class="figure-legend-swatch line-a"></span>
+      <span id="{{ include.fig_id }}-legend-a">Run A</span>
+    </div>
+    <div class="figure-legend-item">
+      <span class="figure-legend-swatch line-b"></span>
+      <span id="{{ include.fig_id }}-legend-b">Run B</span>
+    </div>
+  </div>
+
+  <div class="figure-plot-container">
+    <div class="figure-loading" id="{{ include.fig_id }}-loading">Loading...</div>
+    <div class="figure-plot-wrapper" style="display: none;">
+      <svg class="figure-plot" id="{{ include.fig_id }}-plot-y"></svg>
+    </div>
+    <div class="figure-plot-wrapper" style="display: none;">
+      <svg class="figure-plot" id="{{ include.fig_id }}-plot-diff"></svg>
+    </div>
+    <div class="figure-tooltip" id="{{ include.fig_id }}-tooltip"></div>
+  </div>
+
+  {% if include.caption %}
+  <figcaption>{{ include.caption }}</figcaption>
+  {% endif %}
+</figure>
+
+<script>
+(function() {
+  window.__FIGS__ = window.__FIGS__ || [];
+  window.__FIGS__.push({
+    type: 'trajectory_fork',
+    figId: '{{ include.fig_id }}',
+    dataUrl: '{{ include.data | relative_url }}',
+    options: {}
+  });
+})();
+</script>

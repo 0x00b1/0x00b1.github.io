@@ -1,0 +1,70 @@
+{% comment %}
+Iteration-count Discontinuity Explorer
+Shows how iteration count is piecewise constant and gradients jump at boundaries.
+
+Usage:
+  {% include figures/it_discontinuity.html fig_id="disc1" data="/assets/data/it_sweep.json" %}
+
+Parameters:
+  - fig_id: Unique identifier for this figure instance (required)
+  - data: Path to JSON data file (required)
+  - caption: Optional caption text
+{% endcomment %}
+
+<figure class="interactive-figure" id="{{ include.fig_id }}">
+  <div class="figure-controls">
+    <div class="figure-control">
+      <label for="{{ include.fig_id }}-mode">Mode:</label>
+      <select id="{{ include.fig_id }}-mode"></select>
+    </div>
+  </div>
+
+  <div class="figure-legend">
+    <div class="figure-legend-item">
+      <span class="figure-legend-swatch line-it"></span>
+      <span>Iterations</span>
+    </div>
+    <div class="figure-legend-item">
+      <span class="figure-legend-swatch line-loss"></span>
+      <span>Loss</span>
+    </div>
+    <div class="figure-legend-item">
+      <span class="figure-legend-swatch line-grad"></span>
+      <span>Gradient</span>
+    </div>
+    <div class="figure-legend-item" id="{{ include.fig_id }}-legend-fd" style="display: none;">
+      <span class="figure-legend-swatch dashed"></span>
+      <span>Finite diff</span>
+    </div>
+  </div>
+
+  <div class="figure-plot-container">
+    <div class="figure-loading" id="{{ include.fig_id }}-loading">Loading...</div>
+    <div class="figure-plot-wrapper" style="display: none;">
+      <svg class="figure-plot" id="{{ include.fig_id }}-plot-it"></svg>
+    </div>
+    <div class="figure-plot-wrapper" style="display: none;">
+      <svg class="figure-plot" id="{{ include.fig_id }}-plot-loss"></svg>
+    </div>
+    <div class="figure-plot-wrapper" style="display: none;">
+      <svg class="figure-plot" id="{{ include.fig_id }}-plot-grad"></svg>
+    </div>
+    <div class="figure-tooltip" id="{{ include.fig_id }}-tooltip"></div>
+  </div>
+
+  {% if include.caption %}
+  <figcaption>{{ include.caption }}</figcaption>
+  {% endif %}
+</figure>
+
+<script>
+(function() {
+  window.__FIGS__ = window.__FIGS__ || [];
+  window.__FIGS__.push({
+    type: 'it_discontinuity',
+    figId: '{{ include.fig_id }}',
+    dataUrl: '{{ include.data | relative_url }}',
+    options: {}
+  });
+})();
+</script>
