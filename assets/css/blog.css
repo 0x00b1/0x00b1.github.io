@@ -364,3 +364,150 @@ figcaption {
         font-size: 0.8em;
     }
 }
+
+/* ==========================================================================
+   Syntax Highlighting - Rouge
+   Warm, muted theme complementing the paper aesthetic
+   ========================================================================== */
+
+.highlight {
+    background-color: var(--color-code-bg);
+    border: 1px solid var(--color-code-border);
+    border-radius: 3px;
+    margin: 1.5em 0;
+}
+
+.highlight pre {
+    margin: 0;
+    border: none;
+    background: none;
+}
+
+/* Comment */
+.highlight .c,
+.highlight .c1,
+.highlight .cm,
+.highlight .cs {
+    color: #7a8288;
+    font-style: italic;
+}
+
+/* Keyword */
+.highlight .k,
+.highlight .kc,
+.highlight .kd,
+.highlight .kn,
+.highlight .kp,
+.highlight .kr,
+.highlight .kt {
+    color: #8b5a2b;
+    font-weight: 500;
+}
+
+/* String */
+.highlight .s,
+.highlight .s1,
+.highlight .s2,
+.highlight .sb,
+.highlight .sc,
+.highlight .sd,
+.highlight .se,
+.highlight .sh,
+.highlight .si,
+.highlight .sr,
+.highlight .ss,
+.highlight .sx {
+    color: #5a7a5a;
+}
+
+/* Number */
+.highlight .m,
+.highlight .mi,
+.highlight .mf,
+.highlight .mh,
+.highlight .mo,
+.highlight .il {
+    color: #6a5a8a;
+}
+
+/* Name / Identifier */
+.highlight .n,
+.highlight .nb,
+.highlight .ni,
+.highlight .nl {
+    color: var(--color-text);
+}
+
+/* Name.Function */
+.highlight .nf,
+.highlight .fm {
+    color: #4a6a8a;
+}
+
+/* Name.Class */
+.highlight .nc,
+.highlight .nn {
+    color: #6a5a4a;
+    font-weight: 500;
+}
+
+/* Name.Attribute */
+.highlight .na {
+    color: #5a6a7a;
+}
+
+/* Name.Builtin */
+.highlight .nb {
+    color: #7a5a6a;
+}
+
+/* Name.Variable */
+.highlight .nv,
+.highlight .vc,
+.highlight .vg,
+.highlight .vi {
+    color: #5a5a7a;
+}
+
+/* Operator */
+.highlight .o,
+.highlight .ow {
+    color: #666;
+}
+
+/* Punctuation */
+.highlight .p {
+    color: #555;
+}
+
+/* Error */
+.highlight .err {
+    color: #a03030;
+    background-color: #fbe8e8;
+}
+
+/* Generic */
+.highlight .gd {
+    color: #903030;
+    background-color: #fbe8e8;
+}
+
+.highlight .gi {
+    color: #307030;
+    background-color: #e8fbe8;
+}
+
+.highlight .gh {
+    color: #333;
+    font-weight: 600;
+}
+
+.highlight .gp {
+    color: #666;
+    font-weight: 500;
+}
+
+.highlight .gu {
+    color: #666;
+    font-weight: 500;
+}
