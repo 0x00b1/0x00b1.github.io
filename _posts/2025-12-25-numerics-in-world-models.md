@@ -206,7 +206,7 @@ Both executions are "numerically reasonable," but they do different things at th
 
 At this point it is tempting to treat backend differences as the main story. They matter, but they are still secondary to the central amplifier in world models: long-horizon, stateful algorithms.
 
-Consider a parameterized discrete dynamical system
+Consider a parameterized discrete dynamical system:
 
 $$
 z_{t+1} = F_\theta(z_t, u_t), \qquad t = 0,\ldots,T-1,
